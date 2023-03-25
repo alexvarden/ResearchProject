@@ -31,6 +31,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn import metrics
 
 
 class CountefactualSurrogateModel:
@@ -284,21 +286,47 @@ class CountefactualSurrogateModel:
         # Make predictions on the testing set
         y_pred = clf.predict(X_test)
 
-        print(np.unique(y_test))
-        print(np.unique(y_pred))
+
+        # hack to ensure there is at least one of each class for multclassproblems
 
         depth = clf['classifier'].tree_.max_depth
         # mean_path_length = get_mean_path_length(clf)
 
-        y_pred_proba = clf.predict_proba(X_test)
-        
+        y_score = clf.predict_proba(X_test)
 
-        if (len(y_train.unique())>2):
-            auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr', average='macro')
+
+
+
+        if self.regression :
+            # # The mean squared error
+            print('Mean squared error: %.2f'
+                % mean_squared_error(y_test, y_pred_test))
+            # The coefficient of determination: 1 is perfect prediction
+            print('Coefficient of determination: %.2f'
+                % r2_score(y_test, y_pred_test))
+
         else:
-            auc = roc_auc_score(y_test, y_pred_proba[:, 1])
+            if (len(y_train.unique()) > 2):
+                # I hate i had to do this myself, but the roc_auc_score() cant handle having a varialbe test set for diffrent clasees
+                label_binarizer = LabelBinarizer().fit(y_train)
+                y_onehot_test = label_binarizer.transform(y_test)
+                aggragtedAuc = []
+                for class_of_interest in label_binarizer.classes_:
+                    class_id = np.flatnonzero(
+                        label_binarizer.classes_ == class_of_interest)[0]
+                    y_onehot_test[:, class_id]
+                    y_score[:, class_id]
+                    fpr, tpr, _ = roc_curve(
+                        y_onehot_test[:, class_id], y_score[:, class_id], 
+                       )
+                    roc_auc = auc(fpr, tpr)
+                    print(f"{class_of_interest} auc: {roc_auc}")
+                    aggragtedAuc.append(roc_auc)
+                auc_var = np.mean(aggragtedAuc)
+            else:
+                auc_var = roc_auc_score(y_test, y_score[:, 1])
 
-        print("AUC score:", auc)
+            print("AUC score:", auc_var)
 
         # Evaluate the accuracy of the model
         print('Accuracy:', metrics.accuracy_score(y_test, y_pred))
@@ -319,8 +347,6 @@ class CountefactualSurrogateModel:
             f'decision_trees/{fileMod}-{self.fileModifer}-{self.name}')
 
 
-      
-
 
     def getTransformer(self):
         categorical_transformer = Pipeline(steps=[
@@ -336,3 +362,4 @@ class CountefactualSurrogateModel:
         transformations = self.getTransformer()
         return Pipeline(steps=[('preprocessor', transformations),
                                ('classifier', model)])
+
