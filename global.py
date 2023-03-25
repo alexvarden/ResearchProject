@@ -5,46 +5,40 @@ from CounterfactualSurrogateModel import *
 
 
 
-
+N_SAMPES = 1000
 
 
 # # # -------------------------------
 
-iris_category_features = []
-iris_continous_features = ['sepal_length','sepal_width','petal_length','petal_width']
+# iris_category_features = []
+# iris_continous_features = ['sepal_length','sepal_width','petal_length','petal_width']
 
-iris = NN_Classifier('iris', hidden_layer_sizes=(100, 100, 100, 100, 100, 100, 100, 100, 100),
-                           categorical_features=iris_category_features, continous_features=iris_continous_features)
+# iris = NN_Classifier('iris', hidden_layer_sizes=(100, 100, 100, 100, 100, 100, 100, 100, 100),
+#                            categorical_features=iris_category_features, continous_features=iris_continous_features)
 
-iris.load_data()
-iris.split_data()
+# iris.load_data()
+# iris.split_data()
 # iris.train()
-iris.loadModel()
-iris.evaluate() 
+# iris.loadModel()
+# iris.evaluate() 
 
 
-iris_surrogateModel = CountefactualSurrogateModel('iris',
-    categorical_features=iris.categorical_features,
-    continous_features=iris.continous_features,
-    className="class",
-    regression=False,
-    n_samples=1    
-)
-iris_surrogateModel.loadModel(iris.clf)
-iris_surrogateModel.generate(scale=1)
-iris_surrogateModel.loadData(path=f"counterfactuals/{iris.name}-1.csv")
-iris_surrogateModel.n_samples = 1
-iris_surrogateModel.generate(scale=1, generation=2)
-iris_surrogateModel.generateTree(dataset=[1, 2])
+# iris_data = iris.getGlobalRandomSample(n_samples=N_SAMPES)
 
-
-# assuming your dataframe is called df, and you want to find the 10 nearest neighbors to the first row
-example = iris.X.iloc[40]
-k_nearest_neighbors = iris.localiseTo(100, example)
-
-
-
-
+# iris_surrogateModel = CountefactualSurrogateModel('iris',
+#     categorical_features=iris.categorical_features,
+#     continous_features=iris.continous_features,
+#     className="class",
+#     regression=False,
+#     n_samples=1    
+# )
+# iris_surrogateModel.loadModel(iris.clf)
+# iris_surrogateModel.loadDataSet(iris_data)
+# iris_surrogateModel.generate(scale=1)
+# iris_surrogateModel.loadData(path=f"counterfactuals/{iris.name}-1.csv")
+# iris_surrogateModel.n_samples = 1
+# iris_surrogateModel.generate(scale=1, generation=2)
+# iris_surrogateModel.generateTree(dataset=[1, 2])
 
 
 # # #  # -------------------------------
@@ -74,9 +68,9 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 #     n_samples=1
 # )
 # dryBean_surrogateModel.loadModel(dryBean.clf)
-# dryBean_surrogateModel.generate(scale=1)
-# dryBean_surrogateModel.loadData(path=f"counterfactuals/{dryBean.name}-1.csv")
-# dryBean_surrogateModel.generate(scale=1, generation=2)
+# # dryBean_surrogateModel.generate(scale=1)
+# # dryBean_surrogateModel.loadData(path=f"counterfactuals/{dryBean.name}-1.csv")
+# # dryBean_surrogateModel.generate(scale=1, generation=2)
 # dryBean_surrogateModel.generateTree(dataset=[1, 2])
 
 
@@ -96,15 +90,21 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 # adult.loadModel()
 # adult.evaluate()
 
-
 # adult_surrogateModel = CountefactualSurrogateModel('adult',
 #     categorical_features=adult.categorical_features,
 #     continous_features=adult.continous_features,
 #     className="class"
 # )
 # adult_surrogateModel.loadModel(adult.clf)
-# adult_surrogateModel.generate(scale=0.001)
-# adult_surrogateModel.generateTree()
+# adult_surrogateModel.generate(scale=1)
+
+
+# adult_surrogateModel.generate(scale=1)
+# adult_surrogateModel.loadData(path=f"counterfactuals/{adult.name}-1.csv")
+# adult_surrogateModel.generate(scale=1, generation=2)
+# adult_surrogateModel.generateTree(dataset=[1, 2])
+
+
 
 # # # # -------------------------------
 
@@ -120,7 +120,7 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 # )
 # bike.load_data()
 # bike.split_data()
-# # bike.train()
+# bike.train()
 # bike.loadModel()
 # bike.evaluate()
 
@@ -131,7 +131,7 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 #     regression=True
 # )
 # bike_surrogateModel.loadModel(bike.clf)
-# # bike_surrogateModel.generate(scale=0.1)
+# bike_surrogateModel.generate(scale=0.1)
 # bike_surrogateModel.generateTree()
 
 
@@ -149,7 +149,7 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 # )
 # wine.load_data()
 # wine.split_data()
-# # wine.train()
+# wine.train()
 # wine.loadModel()
 # wine.evaluate()
 
@@ -160,41 +160,41 @@ k_nearest_neighbors = iris.localiseTo(100, example)
 #     regression=True
 # )
 # wine_surrogateModel.loadModel(wine.clf)
-# # wine_surrogateModel.generate(scale=0.1)
+# wine_surrogateModel.generate(scale=0.1)
 # wine_surrogateModel.generateTree()
 
 
 
 
-# # # --------
-# # category_features = []
-# # continous_features = ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", 
-# #                       "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol"]
+# # --------
+# category_features = []
+# continous_features = ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", 
+#                       "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol"]
 
-# # regressor = NN_Regressor('wine-quality-red',
-# #     hidden_layer_sizes=(1000, 1000, 100, 100, 100, 100, 100, 100, 10, 10, 10,10),
-# #     categorical_features=category_features,
-# #     continous_features=continous_features,
-# #      classname="quality"
-# # )
-# # regressor.load_data()
-# # regressor.split_data()
-# # # regressor.train()
-# # regressor.loadModel()
-# # regressor.evaluate()
+# regressor = NN_Regressor('wine-quality-red',
+#     hidden_layer_sizes=(1000, 1000, 100, 100, 100, 100, 100, 100, 10, 10, 10,10),
+#     categorical_features=category_features,
+#     continous_features=continous_features,
+#      classname="quality"
+# )
+# regressor.load_data()
+# regressor.split_data()
+# # regressor.train()
+# regressor.loadModel()
+# regressor.evaluate()
 
 
-# # regressor = NN_Regressor('wine-quality-white',
-# #     hidden_layer_sizes=(500, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 10, ),
-# #     categorical_features=category_features,
-# #     continous_features=continous_features,
-# #      classname="quality"
-# # )
-# # regressor.load_data()
-# # regressor.split_data()
-# # # regressor.train()
-# # regressor.loadModel()
-# # regressor.evaluate()
+# regressor = NN_Regressor('wine-quality-white',
+#     hidden_layer_sizes=(500, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 10, ),
+#     categorical_features=category_features,
+#     continous_features=continous_features,
+#      classname="quality"
+# )
+# regressor.load_data()
+# regressor.split_data()
+# # regressor.train()
+# regressor.loadModel()
+# regressor.evaluate()
 
 
 

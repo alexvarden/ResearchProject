@@ -25,21 +25,36 @@ from sklearn import metrics
 from sklearn.tree import export_graphviz
 import graphviz
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import FunctionTransformer
 
 
 class CountefactualSurrogateModel:
-    def __init__(self, name, className="class", categorical_features=[], continous_features=[], regression=False, n_samples=None):
+    def __init__(self, name,
+        className="class", 
+        fileModifer="global", 
+        categorical_features=[], 
+        continous_features=[], 
+        regression=False, 
+        n_samples=None):
+
         self.name = name
         self.className = className
         self.continous_features = continous_features
         self.categorical_features = categorical_features
         self.regression = regression
+        self.fileModifer = fileModifer
         
         if (n_samples is None):
             n_samples = 1
         
         self.n_samples = n_samples
         self.loadData()
+
 
     def loadDataSet(self, data):
         self.data = data
@@ -75,88 +90,133 @@ class CountefactualSurrogateModel:
         )
         self.diceMl = dice_ml.Dice(d, m, method="genetic")
 
-    def generate(self, scale=1, generation=1, classes=[]):
-        self.setup()
+    def generate(self, scale=1, generation=1, localisedData=None):
         if (self.regression):
-            self.generateRegression(scale=scale,generation=generation)
+            self.generateRegression(
+                scale=scale, generation=generation, localisedData=localisedData)
         else:
-            self.generateClassifcation(scale=scale,generation=generation,classes=classes)
+            self.generateClassifcation(
+                scale=scale, generation=generation, localisedData=localisedData)
 
-    def generateRegression(self, scale=1, generation=1):
+    def generateRegression(self, scale=1, generation=1, localisedData=None):
+        self.setup()
         quantileRanges = self.get_quantile_ranges(self.data[self.className], 4)
         self.cycleAllClasses(quantileRanges, 
                              scale=scale,
-                             generation=generation)
+                             generation=generation,
+                             localisedData=localisedData)
 
-    def generateClassifcation(self, scale=1, generation=1):
+    def generateClassifcation(self, scale=1, generation=1, localisedData=None):
+        self.setup()
         self.data[self.className] = pd.Categorical(self.data[self.className])
         classees = dict(enumerate(self.data[self.className].cat.categories))
         self.cycleAllClasses(classees, 
                              scale=scale, 
-                             generation=generation)
+                             generation=generation,
+                             localisedData=localisedData)
 
-    def cycleAllClasses(self, classes, scale=1, generation=1):
+
+    def cycleAllClasses(self, classes, scale=1, generation=1, localisedData=None):
+        if (localisedData is not None):
+            data = localisedData
+        else:
+            data = self.data
+        
         percentage_to_sample = 1
-        if (len(classes)>1):
-            percentage_to_sample = percentage_to_sample / (len(classes) - 1)
-        percentage_to_sample = percentage_to_sample * scale
+        
+        if (len(data)>50):
+            percentage_to_sample = self._getPercentageToSample(classes, scale)
 
-        f = open(f'counterfactuals/{self.name}-{generation}.csv', 'w')
+        f = open(f'counterfactuals/{self.fileModifer}-{self.name}-{generation}.csv', 'w')
         first = True
         writer = csv.writer(f)
-        for classCode in classes:
-            if self.regression : 
-                query_instances = self.data[
-                    (self.data[self.className] >= classes[classCode][0]) & 
-                    (self.data[self.className] <= classes[classCode][1])
-                ]
-            else:
-                query_instances = self.data[
-                    self.data[self.className].cat.codes == classCode
-                ]
 
+        for classCode in classes:
+            query_instances = self._getQueryInstances(data, classCode, classes)
+            
             for desiredClass in classes:
                 if (desiredClass == classCode):
                     continue
-                print(
-                    f" {classes[classCode]} => {classes[desiredClass]}({percentage_to_sample})")
 
-                instances = query_instances.drop([self.className], axis=1).sample(
-                    frac=percentage_to_sample, random_state=1)
+                print(f" {classes[classCode]} => {classes[desiredClass]}({percentage_to_sample})")
                 
-                if self.regression:
-                    result = self.diceMl.generate_counterfactuals(
-                        instances,
-                        total_CFs=self.n_samples,
-                        desired_range=classes[desiredClass],
-                        proximity_weight=5,
-                        sparsity_weight=0.2,
-                        diversity_weight=0.5,
-                        categorical_penalty=0.1,
-                    )
-                else:
-                    result = self.diceMl.generate_counterfactuals(
-                        instances,
-                        total_CFs=self.n_samples,
-                        desired_class=int(desiredClass),
-                        proximity_weight=5,
-                        sparsity_weight=0.2,
-                        diversity_weight=0.5,
-                        categorical_penalty=0.1,
-                    )
+                sample = query_instances.drop([self.className], axis=1).sample(
+                    frac=percentage_to_sample, random_state=1)
 
-                result = json.loads(result.to_json())
-                cfList = result["cfs_list"]
-                cfList = self.flattenArray(cfList)
+                if (len(sample)<1):
+                    print("skipping due to no examples")
+                    continue
 
-                if (not self.regression):
-                    cfList = self.lookupClassLabel(cfList, classes)
+                try:
+                    result, heading = self._queryDice(
+                        sample, desiredClass, classes)
+                except:
+                    print("============== RETRY ! ===============")
+                    print(sample)
+                    print(f" errror RETRYing : {classes[classCode]} => {classes[desiredClass]}")
+                    try:
+                        result, heading = self._queryDice(
+                        sample, desiredClass, classes)
+                    except:
+                        print("============== ERROR ! ===============")
+                        print(sample)
+                        print(f" errror skipping : {classes[classCode]} => {classes[desiredClass]}")
+                        continue
+
 
                 if (first):
-                    print(result['feature_names_including_target'])
-                    writer.writerow(result['feature_names_including_target'])
+                    writer.writerow(heading)
                     first = False
-                writer.writerows(cfList)
+
+                writer.writerows(result)
+
+    def _getQueryInstances(self, data, classCode, classes):
+        if self.regression:
+            return data[
+                (data[self.className] >= classes[classCode][0]) &
+                (data[self.className] <= classes[classCode][1])
+            ]
+        else:
+            return data[
+                data[self.className] == classes[classCode]
+            ]
+
+    def _queryDice(self, data, desiredClass, classes):
+        if self.regression:
+            result = self.diceMl.generate_counterfactuals(
+                data,
+                total_CFs=self.n_samples,
+                desired_range=classes[desiredClass],
+                proximity_weight=5,
+                sparsity_weight=0.2,
+                diversity_weight=0.1,
+                categorical_penalty=0,
+            )
+        else:
+            result = self.diceMl.generate_counterfactuals(
+                data,
+                total_CFs=self.n_samples,
+                desired_class=int(desiredClass),
+                proximity_weight=5,
+                sparsity_weight=1,
+                diversity_weight=0.1,
+                categorical_penalty=0,
+            )
+
+        result = json.loads(result.to_json())
+        cfList = result["cfs_list"]
+        cfList = self.flattenArray(cfList)
+
+        if (not self.regression):
+            cfList = self.lookupClassLabel(cfList, classes)
+
+        return cfList, result['feature_names_including_target']
+
+    def _getPercentageToSample(self, classes, scale):
+        percentage_to_sample = 1
+        if (len(classes) > 1):
+            percentage_to_sample = percentage_to_sample / (len(classes) - 1)
+        return percentage_to_sample * scale
 
     def flattenArray(self,arr):
         # Create an empty 2D list to hold the converted values
@@ -195,58 +255,84 @@ class CountefactualSurrogateModel:
 
         return quantile_ranges
 
-    def generateTree(self,dataset=[1]):
+    def generateTree(self, dataset=[],  localisedData=None, localisedValidationData=None, fileMod="tree"):
         files = []
+
+        if (localisedData is not None):
+            files.append(localisedData)
+
         for generation in dataset:
-            files.append(pd.read_csv(f'counterfactuals/{self.name}-{generation}.csv'))
+            files.append(pd.read_csv(
+                f'counterfactuals/{self.fileModifer}-{self.name}-{generation}.csv'))
 
         countfactuals = pd.concat(files)
 
         X_train = countfactuals.drop([self.className], axis=1)
         y_train = countfactuals[self.className]
+   
+        if localisedValidationData is None:
+            validation = pd.read_csv(f'data/{self.name}.csv')
+        else:
+            validation = localisedValidationData
 
-        # actual = pd.read_csv(f'data/{self.name}.csv').sample(frac=0.5)
-
-
-
-
-
-        X_test = self.data.drop([self.className], axis=1)
+        X_test = validation.drop([self.className], axis=1)
         y_test = self.clf.predict(X_test)
         
-        clf = DecisionTreeClassifier()
+        clf = self.getPipline(DecisionTreeClassifier(max_depth=20))
         clf.fit(X_train, y_train)
 
         # Make predictions on the testing set
         y_pred = clf.predict(X_test)
-        depth = clf.tree_.max_depth
+
+        print(np.unique(y_test))
+        print(np.unique(y_pred))
+
+        depth = clf['classifier'].tree_.max_depth
         # mean_path_length = get_mean_path_length(clf)
+
+        y_pred_proba = clf.predict_proba(X_test)
+        
+
+        if (len(y_train.unique())>2):
+            auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr', average='macro')
+        else:
+            auc = roc_auc_score(y_test, y_pred_proba[:, 1])
+
+        print("AUC score:", auc)
 
         # Evaluate the accuracy of the model
         print('Accuracy:', metrics.accuracy_score(y_test, y_pred))
         print('Depth of the tree:', depth)
-        self.saveTreeToFile(clf)
+        self.saveTreeToFile(clf, fileMod, classnames=y_train.unique())
 
-    def saveTreeToFile(self,model):
+    def saveTreeToFile(self, model, fileMod="tree",classnames=None):
 
-        dot_data = export_graphviz(model, out_file=None,
-                                feature_names=self.X.columns,
-                                class_names=self.y.unique(),
-                                filled=True, 
-                                rounded=True,
-                                special_characters=True)
+        dot_data = export_graphviz(model['classifier'],
+            out_file=None,
+            feature_names=model['preprocessor'].get_feature_names_out(),
+            class_names=classnames,
+            filled=True, 
+            rounded=True,
+            special_characters=True)
         graph = graphviz.Source(dot_data)
-        graph.render(f'decision_trees/{self.name}')
-
+        graph.render(
+            f'decision_trees/{fileMod}-{self.fileModifer}-{self.name}')
 
 
       
 
-    # def localiseTo(self, k, example):
-    #     X = self.data.values
-    #     nn = NearestNeighbors(n_neighbors=k)
-    #     nn.fit(X)
-    #     distances, indices = nn.kneighbors(X)
-    #     example_index = self.data.index.get_loc(example.name)
-    #     k_nearest_neighbors = self.data.iloc[indices[example_index, 1:k+1]]
-    #     return k_nearest_neighbors
+
+    def getTransformer(self):
+        categorical_transformer = Pipeline(steps=[
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))
+        ])
+
+        return ColumnTransformer(transformers=[
+            ('cat', categorical_transformer, self.categorical_features),
+            ('num_preprocess', MinMaxScaler(), self.continous_features),
+        ])
+
+    def getPipline(self, model):
+        transformations = self.getTransformer()
+        return Pipeline(steps=[('preprocessor', transformations),
+                               ('classifier', model)])
