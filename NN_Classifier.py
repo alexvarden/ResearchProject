@@ -71,7 +71,7 @@ class NN_Classifier(Model):
             self.label_binarizer = LabelBinarizer().fit(self.y_train)
             self.y_onehot_test = self.label_binarizer.transform(self.y_test)
 
-            with PdfPages(f'ROC/{self.name}_nn_ressidual_plot.pdf') as pdf:
+            with PdfPages(f'ROC/{self.name}_nn_roc_curve.pdf') as pdf:
                 for class_of_interest in self.label_binarizer.classes_:
                     class_id = np.flatnonzero(
                         self.label_binarizer.classes_ == class_of_interest)[0]

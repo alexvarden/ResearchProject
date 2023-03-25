@@ -19,7 +19,7 @@ import dice_ml
 import math
 
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.tree import export_graphviz
@@ -279,9 +279,21 @@ class CountefactualSurrogateModel:
 
         X_test = validation.drop([self.className], axis=1)
         y_test = self.clf.predict(X_test)
-        
-        clf = self.getPipline(DecisionTreeClassifier(max_depth=20))
+
+
+        if self.regression:
+            clf = self.getPipline(DecisionTreeRegressor(max_depth=20))
+
+        else:
+            clf = self.getPipline(DecisionTreeClassifier(max_depth=20))
+
+
+
         clf.fit(X_train, y_train)
+
+
+
+
 
         # Make predictions on the testing set
         y_pred = clf.predict(X_test)
@@ -292,20 +304,22 @@ class CountefactualSurrogateModel:
         depth = clf['classifier'].tree_.max_depth
         # mean_path_length = get_mean_path_length(clf)
 
-        y_score = clf.predict_proba(X_test)
-
 
 
 
         if self.regression :
+
             # # The mean squared error
             print('Mean squared error: %.2f'
-                % mean_squared_error(y_test, y_pred_test))
+                % mean_squared_error(y_test, y_pred))
             # The coefficient of determination: 1 is perfect prediction
             print('Coefficient of determination: %.2f'
-                % r2_score(y_test, y_pred_test))
+                % r2_score(y_test, y_pred))
 
         else:
+
+            y_score = clf.predict_proba(X_test)
+
             if (len(y_train.unique()) > 2):
                 # I hate i had to do this myself, but the roc_auc_score() cant handle having a varialbe test set for diffrent clasees
                 label_binarizer = LabelBinarizer().fit(y_train)
@@ -327,14 +341,17 @@ class CountefactualSurrogateModel:
                 auc_var = roc_auc_score(y_test, y_score[:, 1])
 
             print("AUC score:", auc_var)
+            print('Accuracy:', metrics.accuracy_score(y_test, y_pred))
 
         # Evaluate the accuracy of the model
-        print('Accuracy:', metrics.accuracy_score(y_test, y_pred))
         print('Depth of the tree:', depth)
-        self.saveTreeToFile(clf, fileMod, classnames=y_train.unique())
 
-    def saveTreeToFile(self, model, fileMod="tree",classnames=None):
+        if self.regression:
+            print("ohh noo")
+        else:
+            self.saveTreeClassifcationToFile(clf, fileMod, classnames=y_train.unique())
 
+    def saveTreeClassifcationToFile(self, model, fileMod="tree", classnames=None):
         dot_data = export_graphviz(model['classifier'],
             out_file=None,
             feature_names=model['preprocessor'].get_feature_names_out(),

@@ -18,7 +18,7 @@ iris = NN_Classifier('iris', hidden_layer_sizes=(100, 100, 100, 100, 100, 100, 1
 
 iris.load_data()
 iris.split_data()
-iris.train()
+# iris.train()
 iris.loadModel()
 iris.evaluate()
 
@@ -36,14 +36,14 @@ iris_surrogateModel = CountefactualSurrogateModel('iris',
 )
 iris_surrogateModel.loadModel(iris.clf)
 iris_surrogateModel.loadDataSet(iris_data)
-iris_surrogateModel.generate(scale=1)
+# iris_surrogateModel.generate(scale=1)
 
 
 print("STARTING GENERATION 2")
 iris_surrogateModel.loadData(
     path=f"counterfactuals/{iris_surrogateModel.fileModifer}-{iris.name}-1.csv")
 iris_surrogateModel.n_samples = 1
-iris_surrogateModel.generate(scale=1, generation=2)
+# iris_surrogateModel.generate(scale=1, generation=2)
 
 print("CounterFactual")
 iris_surrogateModel.generateTree(dataset=[1, 2])

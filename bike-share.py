@@ -1,23 +1,24 @@
+
 from NN_Classifier import *
 from NN_Regressor import *
 from CounterfactualSurrogateModel import *
 import time
 
 
-N_SAMPES = 1500
+N_SAMPES = 5000
 
 
 # # # -------------------------------
 
+model_category_features = ['weathersit']
+model_continous_features = ['dteday','holiday', 'weekday', 'workingday', 'season',
+                      'yr', 'mnth', 'hr', 'temp', 'atemp', 'hum', 'windspeed']
 
-model_category_features = []
-model_continous_features = ['Area', 'Perimeter', 'MajorAxisLength', 'MinorAxisLength', 'AspectRation', 'Eccentricity', 'ConvexArea',
-                              'EquivDiameter', 'Extent', 'Solidity', 'roundness', 'Compactness', 'ShapeFactor1', 'ShapeFactor2', 'ShapeFactor3', 'ShapeFactor4']
-
-model = NN_Classifier('dry-bean',
-    hidden_layer_sizes=(16, 50, 50, 50, 50, 50, 50, 50, 50, 1000),
+model = NN_Regressor('bike-sharing-hourly',
+    hidden_layer_sizes=(100, 100, 100, 100),
     categorical_features=model_category_features,
-    continous_features=model_continous_features
+    continous_features=model_continous_features,
+    classname="cnt"
 )
 
 model.load_data()
@@ -30,25 +31,25 @@ start_time = time.time()
 
 print("STARTING GENERATION 1")
 model_data = model.getGlobalRandomSample(n_samples=N_SAMPES)
-
-model_surrogateModel = CountefactualSurrogateModel('dry-bean',
+print(model_data)
+model_surrogateModel = CountefactualSurrogateModel('bike-sharing-hourly',
     fileModifer=f"global-{N_SAMPES}",
     categorical_features=model.categorical_features,
     continous_features=model.continous_features,
-    className="class",
-    regression=False,
+    className="cnt",
+    regression=True,
     n_samples=1
 )
 model_surrogateModel.loadModel(model.clf)
 model_surrogateModel.loadDataSet(model_data)
-# model_surrogateModel.generate(scale=1)
+model_surrogateModel.generate(scale=1)
 
 
 print("STARTING GENERATION 2")
 model_surrogateModel.loadData(
     path=f"counterfactuals/{model_surrogateModel.fileModifer}-{model.name}-1.csv")
 model_surrogateModel.n_samples = 1
-# model_surrogateModel.generate(scale=1, generation=2)
+model_surrogateModel.generate(scale=1, generation=2)
 
 
 print("CounterFactual")
@@ -61,5 +62,3 @@ model_surrogateModel.generateTree(
 end_time = time.time()
 print("Elapsed time: ", end_time - start_time, "seconds")
 print(f"SampleSize : {N_SAMPES}")
-
- 
