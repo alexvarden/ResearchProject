@@ -12,8 +12,14 @@ from RF_Classifier import *
 from RF_Regressor import *
 from DecisonTree import *
 from CounterfactualSurrogateModel import *
- 
+import logging
+
 import time
+
+N_SAMPLES = 200
+experimentName = f"global-RF-{N_SAMPLES}"
+logging.basicConfig(filename=f'output-{time.time()}.log', level=logging.INFO,
+                    format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 datasets = [
     {
@@ -72,11 +78,10 @@ datasets = [
 ]
 
 
-N_SAMPES = 200
-experimentName = f"global-RF-{N_SAMPES}"
 
 for dataset in datasets:
     print(f"========= {dataset['name']} ===========")
+    logging.info(f"========= {dataset['name']} ===========")
     model = dataset['model'](dataset['name'],
         categorical_features=dataset['category_features'],
         continous_features=dataset['continous_features'],
@@ -94,7 +99,7 @@ for dataset in datasets:
     start_time = time.time()
 
     print("STARTING GENERATION 1")
-    model_data = model.getGlobalRandomSample(n_samples=N_SAMPES)
+    model_data = model.getGlobalRandomSample(n_samples=N_SAMPLES)
 
     model_surrogateModel = CountefactualSurrogateModel(model.name,
     fileModifer=experimentName,
@@ -116,13 +121,10 @@ for dataset in datasets:
     model_surrogateModel.generate(scale=1, generation=2)
 
     end_time = time.time()
-    print("Elapsed time: ", end_time - start_time, "seconds")
-    print(f"SampleSize : {N_SAMPES}")
+    logging.info(f"Elapsed time: {end_time - start_time} seconds")
+    logging.info(f"SampleSize : {N_SAMPLES}")
 
-
-
-
-    # validationData = model.getGlobalRandomSample(n_samples=N_SAMPES)
+    # validationData = model.getGlobalRandomSample(n_samples=N_SAMPLES)
 
     # surrogateModel = DecisonTree(dataset['name'],
     #     categorical_features=dataset['category_features'],
@@ -152,7 +154,7 @@ for dataset in datasets:
     #     n_samples=1
     # )
 
-    # validationData = model.getGlobalRandomSample(n_samples=N_SAMPES)
+    # validationData = model.getGlobalRandomSample(n_samples=N_SAMPLES)
 
     # surrogateModel.loadModel(model.clf)
     # # surrogateModel.loadDataSet(model_data)
@@ -164,13 +166,13 @@ for dataset in datasets:
 
     # print("Control")
     # surrogateModel.generateTree(
-    #     localisedData=model.getGlobalRandomSample(n_samples=N_SAMPES),
+    #     localisedData=model.getGlobalRandomSample(n_samples=N_SAMPLES),
     #     localisedValidationData=validationData
     # )
 
     # end_time = time.time()
     # print("Elapsed time: ", end_time - start_time, "seconds")
-    # print(f"SampleSize : {N_SAMPES}")
+    # print(f"SampleSize : {N_SAMPLES}")
 
 
 # %% [markdown]
