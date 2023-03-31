@@ -19,8 +19,8 @@ import logging
 
 import time
 
-N_SAMPLES = 5000
-SCALE = 0.1
+N_SAMPLES = 10000
+SCALE = 0.05
 logging.basicConfig(filename=f'output-{time.time()}.log', level=logging.INFO,
                     format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -171,49 +171,52 @@ for dataset in datasets:
         end_time = time.time()
         logging.info(f"Elapsed time: {end_time - start_time} seconds")
         logging.info(f"SampleSize : {N_SAMPLES}")
+        
 
-        # Treatment Group
-        logging.info("Treatment model ==========")
+        # # Treatment Group
+        # logging.info("Treatment model ==========")
 
-        surrogateModel = DecisonTree(dataset['name'],
-            categorical_features=dataset['category_features'],
-            continous_features=dataset['continous_features'],
-            classname=dataset['classname'],
-        )
-        surrogateModel.setLogger(logging)
-        trainingData = pd.concat(
-            [
-                pd.read_csv(f"counterfactuals/{CF_model.fileModifer}-{model.name}-1.csv"),
-                pd.read_csv(f"counterfactuals/{CF_model.fileModifer}-{model.name}-2.csv")
-            ]
-        )
-        validationData = model_data = model.getLocalisedData(
-            99, n_samples=N_SAMPLES, radius=radius, globalSample=50000).sample(n=len(trainingData))
+        # surrogateModel = DecisonTree(dataset['name'],
+        #     categorical_features=dataset['category_features'],
+        #     continous_features=dataset['continous_features'],
+        #     classname=dataset['classname'],
+        # )
+        # surrogateModel.setLogger(logging)
+        # trainingData = pd.concat(
+        #     [
+        #         pd.read_csv(f"counterfactuals/{CF_model.fileModifer}-{model.name}-1.csv"),
+        #         pd.read_csv(f"counterfactuals/{CF_model.fileModifer}-{model.name}-2.csv")
+        #     ]
+        # )
+        # validationData = model_data = model.getLocalisedData(
+        #     99, n_samples=N_SAMPLES, radius=radius, globalSample=50000)
 
+        # factionOfEachClass = (len(validationData) / len(model_data[model.classname].unique())) * 0.2
+    
         # validationData = validationData.groupby(model.classname, group_keys=False).apply(
-        #     lambda x: x.sample(frac=0.2))
+        #     lambda x: x.sample(frac=0.2) if len(x) > 10 else x  )
 
-        logging.info(f" surrogate model size : {len(trainingData)}")
-        logging.info(f" validationData size : {len(trainingData)}")
+        # logging.info(f" surrogate model size : {len(trainingData)}")
+        # logging.info(f" validationData size : {len(validationData)}")
 
-        surrogateModel.load_data(data=trainingData)
-        surrogateModel.setTrainingData(trainingData)
-        surrogateModel.setValidationData(validationData)
-        surrogateModel.train()
-        surrogateModel.evaluate(logging)
+        # surrogateModel.load_data(data=trainingData)
+        # surrogateModel.setTrainingData(trainingData)
+        # surrogateModel.setValidationData(validationData)
+        # surrogateModel.train()
+        # surrogateModel.evaluate(logging)
 
-        # Control ======== 
-        logging.info("Control model ==========") 
+        # # Control ======== 
+        # logging.info("Control model ==========") 
 
-        surrogateModel = DecisonTree(dataset['name'],
-            categorical_features=dataset['category_features'],
-            continous_features=dataset['continous_features'],
-            classname=dataset['classname'],
-        )
-        surrogateModel.setLogger(logging)
+        # surrogateModel = DecisonTree(dataset['name'],
+        #     categorical_features=dataset['category_features'],
+        #     continous_features=dataset['continous_features'],
+        #     classname=dataset['classname'],
+        # )
+        # surrogateModel.setLogger(logging)
 
-        surrogateModel.load_data(data=model_data)
-        surrogateModel.setTrainingData(trainingData)
-        surrogateModel.setValidationData(validationData)
-        surrogateModel.train()
-        surrogateModel.evaluate(logging)
+        # surrogateModel.load_data(data=model_data)
+        # surrogateModel.setTrainingData(trainingData)
+        # surrogateModel.setValidationData(validationData)
+        # surrogateModel.train()
+        # surrogateModel.evaluate(logging)
