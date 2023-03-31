@@ -1,3 +1,4 @@
+import math
 from matplotlib.backends.backend_pdf import PdfPages
 import pickle
 from sklearn.preprocessing import LabelBinarizer
@@ -22,15 +23,21 @@ class Model:
                  continous_features=[],
                  date_features=[],
                  drop_features=[],
-                 classname='class'
+                 classname='class',
                  ):
        
+        self.logger = None
+
+        self.regression = False
         self.continous_features = continous_features
         self.categorical_features = categorical_features
         self.date_features = date_features
         self.drop_features = drop_features
         self.classname = classname
         self.name = name
+    
+    def setLogger(self,logger):
+        self.logger = logger
 
     def load_data_from(self,paths):
         data=[]
@@ -81,15 +88,21 @@ class Model:
 
     def getLocalisedData(self, index, n_samples=1000, radius=1.5, globalSample=50000):
         example = self.X.iloc[[index]]
-        samples = self.getRandomSamples(self.X, n_samples=50000)
-        local = self.getNearestNeighbour(samples, example, radius=radius)
+        samples = self.getRandomSamples(self.X, n_samples=globalSample)
 
+        relative_radius = self.getDistanceToNearestOpposite(
+            samples, example
+        )
+        print(radius * relative_radius)
+        local = self.getNearestNeighbour(
+            samples, example, radius=radius * relative_radius)
+        print(f"lenght : {len(local)}")
         if (len(local) == 0):
             raise Exception(
                 'could not find any nearest neighbors, make radius bigger')
 
         local = self.getRandomSamples(local, n_samples)
-
+        print(local)
         local[self.classname] = self.clf.predict(local)
         return local
 
@@ -144,6 +157,87 @@ class Model:
             example, radius, sort_results=True, return_distance=True,   
         )
         return data[data.index.isin(indices[0])]
+
+    def getDistanceToNearestOpposite(self, counterExamples, example):
+        if(self.regression):
+            ranges = self.get_quantile_ranges(self.clf.predict(
+                counterExamples), 4)
+            range_ = self.find_range_index(
+                ranges, self.clf.predict(example))[0]
+
+            counterExamples['range'] = self.clf.predict(
+                counterExamples)
+            counterExamples = counterExamples[counterExamples['range'] != range_]
+            counterExamples = counterExamples.drop(['range'], axis=1)
+        else:
+            class_ = self.clf.predict(example)[0]
+            counterExamples[self.classname] = self.clf.predict(counterExamples)
+            counterExamples = counterExamples[counterExamples[self.classname] != class_]
+            counterExamples = counterExamples.drop([self.classname], axis=1)
+                   
+
+        transformations = self.getTransformer()
+        transformations.fit_transform(self.X)
+
+        counterExamples = transformations.transform(counterExamples)
+        example = transformations.transform(example)
+
+        nn = NearestNeighbors(metric='minkowski')
+
+        nn = nn.fit(counterExamples)
+        distance, indices = nn.kneighbors(
+            example, 1
+        )
+
+        return distance[0][0]
+    
+    def print(self, out):
+        print(out)
+        if (self.logger):
+            self.logger.info(out)
+
+
+
+    def findQuantile(self, data, number):
+        for key, value in data.items():
+            if number >= value[0] and number <= value[1]:
+                return key
+        return None
+        
+
+    def find_range_index(self,data, numbers):
+        result = []
+        for number in numbers:
+            for key, value in data.items():
+                if number >= value[0] and number <= value[1]:
+                    result.append(key)
+                    break
+            else:
+                result.append(None)
+        return result
+
+
+
+    def get_quantile_ranges(self, df, num_quantiles=4):
+        # Add random noise to the input dataframe to ensure unique quantile boundaries
+        df_with_noise = df + np.random.normal(scale=1e-10, size=df.shape)
+        print(df_with_noise)
+        # Get the boundary ranges for the quantiles
+        quantile_labels = range(1, num_quantiles+1)
+        quantile_boundaries = pd.qcut(
+            df_with_noise, q=num_quantiles, labels=quantile_labels, retbins=True)[1]
+
+        # Store the boundary ranges in a dictionary
+        quantile_ranges = {}
+        for i, label in enumerate(quantile_labels):
+            lower_bound = math.floor(quantile_boundaries[i])
+            upper_bound = math.ceil(quantile_boundaries[i+1]-0.1)
+            quantile_ranges[label] = [lower_bound, upper_bound]
+
+        return quantile_ranges
+
+
+
 
     def hamming_distance(self,x, y):
         return np.sum(x != y)

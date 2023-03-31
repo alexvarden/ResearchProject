@@ -29,7 +29,7 @@ class NN_Regressor(Model):
             continous_features=continous_features,
             classname=classname
         )
-
+        self.regression = True
         self.modelName = "nn"
         print(f"******** {name} {self.modelName} ********")
         self.hidden_layer_sizes = hidden_layer_sizes
@@ -58,12 +58,12 @@ class NN_Regressor(Model):
 
         y_reg_pred_test = self.clf.predict(self.X_test)
 
-        print('Mean squared error: %.2f'
-            % mean_squared_error(self.y_test, y_reg_pred_test))
-        print('Coefficient of determination: %.2f'
-            % r2_score(self.y_test, y_reg_pred_test))
-        print('Mean Absolute Error: %.2f'
-            % mean_absolute_error(self.y_test, y_reg_pred_test))
+    
+        self.print(
+            f"Mean squared error: {mean_squared_error(self.y_test, y_reg_pred_test)}")
+        self.print(
+            f"Coefficient of determination: {r2_score(self.y_test, y_reg_pred_test)}")
+        self.print(f'Mean Absolute Error: {mean_absolute_error(self.y_test, y_reg_pred_test)}')
         
         with PdfPages(f'ROC/{self.name}_nn_ressidual_plot.pdf') as pdf:
             plt.scatter(self.y_test, y_reg_pred_test, s=5, color='black')
