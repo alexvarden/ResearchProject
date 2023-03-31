@@ -1,4 +1,3 @@
-from sklearn import metrics
 from matplotlib.backends.backend_pdf import PdfPages
 import pickle
 from sklearn.preprocessing import LabelBinarizer
@@ -14,55 +13,85 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_curve, auc
 from Model import *
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn import metrics
+from sklearn.tree import export_graphviz
+import graphviz
+from sklearn.metrics import roc_auc_score
 
 
-class NN_Classifier(Model):
+class DecisonTree(Model):
     def __init__(self, name,
-                 categorical_features=[],
-                 continous_features=[],
-                 date_features=[], 
-                 hidden_layer_sizes=(100, 100, 100, 100, 100, 100, 100, 100, 100),
-                 classname='class'):
-    
+        categorical_features=[],
+        continous_features=[],
+        classname='class',
+        fileModifer="Tree"
+    ):
         super().__init__(name,
-                       categorical_features=categorical_features,
-                       continous_features=continous_features,
-                       date_features=date_features,
-                       classname=classname)
+            categorical_features=categorical_features,
+            continous_features=continous_features,
+            classname=classname,
 
-        self.modelName = "nn"
-        self.hidden_layer_sizes = hidden_layer_sizes
+        )
+        self.regression = False
+        self.modelName = "tree"
+        self.maxDepth = None
+        self.fileModifer = fileModifer
 
-        print(f"******** {name} {self.modelName} ********")
+    def setValidationData(self,data):
+        self.X_test = data.drop([self.classname], axis=1)
+        self.X_test = self.X_test.loc[:, ~ self.X.columns.str.contains('^Unnamed')]
+        self.y_test = data[self.classname]
 
-    def split_data(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X, self.y, test_size=0.2, stratify=self.y, random_state=1)
-
+    def setTrainingData(self, data):
+        self.X_train = data.drop([self.classname], axis=1)
+        self.X_train = self.X_train.loc[:, ~ self.X.columns.str.contains('^Unnamed')]
+        self.y_train = data[self.classname]
 
     def getModel(self):
-        return MLPClassifier(random_state=1,
-            max_iter=700,
-            activation="relu",
-            hidden_layer_sizes=self.hidden_layer_sizes,
-            verbose=True,
-            solver="adam"
-                             )
-
-    def evaluate(self):
+        if(self.regression):
+            return DecisionTreeRegressor(max_depth=self.maxDepth)
+        else:
+            return DecisionTreeClassifier(max_depth=self.maxDepth)
+            
+    def evaluate(self, fileMod="tree"):
+        
         # Multiclass classification requires One verses Rest in order to compare ROC_AUC
         self.y_score = self.clf.predict_proba(self.X_test)
-        self.roc_curves()
+        
+        # mean_path_length = get_mean_path_length(clf)
+
         y_pred = self.clf.predict(self.X_test)
 
-        if (len(self.y_train.unique()) > 2):
-            auc_var = self.getMeanAuc()
+
+        depth = self.clf['classifier'].tree_.max_depth
+        if self.regression:
+            # # The mean squared error
+            print('Mean squared error: %.2f'
+                  % mean_squared_error(self.y_test, y_pred))
+            # The coefficient of determination: 1 is perfect prediction
+            print('Coefficient of determination: %.2f'
+                  % r2_score(self.y_test, y_pred))
         else:
-            auc_var = metrics.roc_auc_score(self.y_test, self.y_score[:, 1])
+            self.roc_curves()
 
-        print("AUC score:", auc_var)
-        print('Accuracy:', metrics.accuracy_score(self.y_test, y_pred))
+            if (len(self.y_train.unique()) > 2):
+                auc_var = self.getMeanAuc()
+            else:
+                auc_var = roc_auc_score(self.y_test, self.y_score[:, 1])
 
+            print("AUC score:", auc_var)
+            print('Accuracy:', metrics.accuracy_score(self.y_test, y_pred))
+
+        # Evaluate the accuracy of the model
+        print('Depth of the tree:', depth)
+
+        if self.regression:
+            print("unable to save tree for regression")
+        else:
+            self.saveTreeClassifcationToFile(
+                self.clf, fileMod, classnames=self.y_train.unique())
 
     def getMeanAuc(self):
         # I hate i had to do this myself, but the roc_auc_score() cant handle having a varialbe test set for diffrent clasees
@@ -81,6 +110,19 @@ class NN_Classifier(Model):
             # print(f"{class_of_interest} auc: {roc_auc}")
             aggragtedAuc.append(roc_auc)
         return np.mean(aggragtedAuc)
+
+    def saveTreeClassifcationToFile(self, model, fileMod="tree", classnames=None):
+        dot_data = export_graphviz(model['classifier'],
+            out_file=None,
+            feature_names=model['preprocessor'].get_feature_names_out(
+        ),
+            class_names=classnames,
+            filled=True,
+            rounded=True,
+            special_characters=True)
+        graph = graphviz.Source(dot_data)
+        graph.render(
+            f'decision_trees/{fileMod}-{self.fileModifer}-{self.name}')
 
     def roc_curves(self):
         num_classes = len(np.unique(self.y_train))
