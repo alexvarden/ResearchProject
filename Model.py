@@ -32,12 +32,20 @@ class Model:
         self.classname = classname
         self.name = name
 
-    def load_data(self):
-        data = pd.read_csv(f'data/{self.name}.csv')
+    def load_data_from(self,paths):
+        data=[]
+        for path in paths:
+            data.append(pd.read_csv(path))
+        data = pd.concat(data)
+        self.load_data(data=data)
+        
+    def load_data(self,data=None):
+        if (data is None):
+            self.load_data_from([f'data/{self.name}.csv'])
+            return
         self.X = data.drop([self.classname], axis=1)
-        self.X = self.X.loc[:, ~self.X.columns.str.contains('^Unnamed')]
-
         self.y = data[self.classname]
+        self.X = self.X.loc[:, ~self.X.columns.str.contains('^Unnamed')]
 
     def drop_columns(self,x, columns):
         return x.drop(columns=self.drop_features)
@@ -72,14 +80,23 @@ class Model:
         self.clf = pickle.load(open(self.getFilename(), "rb"))
 
     def getLocalisedData(self, index, n_samples=1000, radius=1.5, globalSample=50000):
-        samples = self.getRandomSamples(50000)
         example = self.X.iloc[[index]]
-        local = self.getLocalisedData(samples, example, radius=radius)
-        return self.getRandomSamples(local, n_samples)
+        samples = self.getRandomSamples(self.X, n_samples=50000)
+        local = self.getNearestNeighbour(samples, example, radius=radius)
+
+        if (len(local) == 0):
+            raise Exception(
+                'could not find any nearest neighbors, make radius bigger')
+
+        local = self.getRandomSamples(local, n_samples)
+
+        local[self.classname] = self.clf.predict(local)
+        return local
 
     def getGlobalRandomSample(self,  n_samples=1 ):
         data = self.getRandomSamples(self.X, n_samples=n_samples)
         data[self.classname] = self.clf.predict(data)
+
         return data
 
     def getRandomSamples(self, data, n_samples=1):
@@ -130,12 +147,6 @@ class Model:
 
     def hamming_distance(self,x, y):
         return np.sum(x != y)
-
-
-
-
-
-
 
     def plot_mean_and_dist(self, data1, data2):
         # Separate numerical and categorical columns

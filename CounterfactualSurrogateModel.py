@@ -42,7 +42,9 @@ class CountefactualSurrogateModel:
         categorical_features=[], 
         continous_features=[], 
         regression=False, 
-        n_samples=None):
+        n_samples=None,
+        modelType="nn"
+        ):
 
         self.name = name
         self.className = className
@@ -50,6 +52,7 @@ class CountefactualSurrogateModel:
         self.categorical_features = categorical_features
         self.regression = regression
         self.fileModifer = fileModifer
+        self.modelType = modelType
         
         if (n_samples is None):
             n_samples = 1
@@ -74,7 +77,7 @@ class CountefactualSurrogateModel:
             self.clf = model
             return
         
-        filename = f"models/{self.name}-nn.pickle"
+        filename = f"models/{self.name}-{self.modelType}.pickle"
         self.clf = pickle.load(open(filename, "rb"))
 
     def setup(self):
@@ -110,6 +113,11 @@ class CountefactualSurrogateModel:
 
     def generateClassifcation(self, scale=1, generation=1, localisedData=None):
         self.setup()
+
+        if (len(self.data[self.className].unique())==1) : 
+            raise Exception(
+                'Should have more than one class, maybe widen the neighbourhood')
+
         self.data[self.className] = pd.Categorical(self.data[self.className])
         classees = dict(enumerate(self.data[self.className].cat.categories))
         self.cycleAllClasses(classees, 
@@ -119,15 +127,16 @@ class CountefactualSurrogateModel:
 
 
     def cycleAllClasses(self, classes, scale=1, generation=1, localisedData=None):
+        
+        print(classes)
+
         if (localisedData is not None):
             data = localisedData
         else:
             data = self.data
         
         percentage_to_sample = 1
-        
-        if (len(data)>50):
-            percentage_to_sample = self._getPercentageToSample(classes, scale)
+
 
         f = open(f'counterfactuals/{self.fileModifer}-{self.name}-{generation}.csv', 'w')
         first = True
@@ -135,20 +144,30 @@ class CountefactualSurrogateModel:
 
         for classCode in classes:
             query_instances = self._getQueryInstances(data, classCode, classes)
-            
+           
+            # if small number then dont scale
+            if (len(query_instances) > 15):
+                percentage_to_sample = self._getPercentageToSample(classes, scale)
+            else:
+                percentage_to_sample = 1
+
             for desiredClass in classes:
                 if (desiredClass == classCode):
                     continue
 
                 print(f" {classes[classCode]} => {classes[desiredClass]}({percentage_to_sample})")
                 
+
+
+
+
                 sample = query_instances.drop([self.className], axis=1).sample(
                     frac=percentage_to_sample, random_state=1)
 
                 if (len(sample)<1):
+                    print(sample)
                     print("skipping due to no examples")
                     continue
-
                 try:
                     result, heading = self._queryDice(
                         sample, desiredClass, classes)
@@ -189,8 +208,8 @@ class CountefactualSurrogateModel:
                 data,
                 total_CFs=self.n_samples,
                 desired_range=classes[desiredClass],
-                proximity_weight=5,
-                sparsity_weight=0.2,
+                proximity_weight=1,
+                sparsity_weight=0.1,
                 diversity_weight=0.1,
                 categorical_penalty=0,
             )
@@ -199,8 +218,8 @@ class CountefactualSurrogateModel:
                 data,
                 total_CFs=self.n_samples,
                 desired_class=int(desiredClass),
-                proximity_weight=5,
-                sparsity_weight=1,
+                proximity_weight=1,
+                sparsity_weight=0.1,
                 diversity_weight=0.1,
                 categorical_penalty=0,
             )
@@ -287,28 +306,16 @@ class CountefactualSurrogateModel:
         else:
             clf = self.getPipline(DecisionTreeClassifier(max_depth=20))
 
-
-
         clf.fit(X_train, y_train)
-
-
-
-
 
         # Make predictions on the testing set
         y_pred = clf.predict(X_test)
 
-
         # hack to ensure there is at least one of each class for multclassproblems
-
         depth = clf['classifier'].tree_.max_depth
         # mean_path_length = get_mean_path_length(clf)
 
-
-
-
         if self.regression :
-
             # # The mean squared error
             print('Mean squared error: %.2f'
                 % mean_squared_error(y_test, y_pred))
