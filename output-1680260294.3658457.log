@@ -1,0 +1,15 @@
+2023-03-31 11:58:14 INFO: ========= iris ===========
+2023-03-31 12:15:48 INFO: Elapsed time: 1053.786830663681 seconds
+2023-03-31 12:15:48 INFO: SampleSize : 1500
+2023-03-31 12:15:48 INFO: ========= dry-bean ===========
+2023-03-31 12:57:33 INFO: Elapsed time: 2503.1645646095276 seconds
+2023-03-31 12:57:33 INFO: SampleSize : 1500
+2023-03-31 12:57:33 INFO: ========= adult ===========
+2023-03-31 13:23:51 INFO: Elapsed time: 1576.9700229167938 seconds
+2023-03-31 13:23:51 INFO: SampleSize : 1500
+2023-03-31 13:23:51 INFO: ========= bike-sharing-hourly ===========
+2023-03-31 14:02:16 INFO: Elapsed time: 2284.3527522087097 seconds
+2023-03-31 14:02:16 INFO: SampleSize : 1500
+2023-03-31 14:02:16 INFO: ========= wine-quality ===========
+2023-03-31 16:30:21 INFO: Elapsed time: 8874.482582092285 seconds
+2023-03-31 16:30:21 INFO: SampleSize : 1500
