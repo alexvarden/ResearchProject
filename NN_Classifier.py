@@ -60,8 +60,8 @@ class NN_Classifier(Model):
         else:
             auc_var = metrics.roc_auc_score(self.y_test, self.y_score[:, 1])
 
-        print("AUC score:", auc_var)
-        print('Accuracy:', metrics.accuracy_score(self.y_test, y_pred))
+        self.print(f"AUC score:{auc_var}")
+        self.print(f"Accuracy:{metrics.accuracy_score(self.y_test, y_pred)}")
 
 
     def getMeanAuc(self):

@@ -55,7 +55,7 @@ class DecisonTree(Model):
         else:
             return DecisionTreeClassifier(max_depth=self.maxDepth)
             
-    def evaluate(self, fileMod="tree"):
+    def evaluate(self,  fileMod="tree"):
         
         # Multiclass classification requires One verses Rest in order to compare ROC_AUC
         self.y_score = self.clf.predict_proba(self.X_test)
@@ -67,12 +67,8 @@ class DecisonTree(Model):
 
         depth = self.clf['classifier'].tree_.max_depth
         if self.regression:
-            # # The mean squared error
-            print('Mean squared error: %.2f'
-                  % mean_squared_error(self.y_test, y_pred))
-            # The coefficient of determination: 1 is perfect prediction
-            print('Coefficient of determination: %.2f'
-                  % r2_score(self.y_test, y_pred))
+            self.print(f"Mean squared error: {mean_squared_error(self.y_test, y_pred)}")
+            self.print(f"Coefficient of determination: {r2_score(self.y_test, y_pred)}")
         else:
             self.roc_curves()
 
@@ -81,17 +77,18 @@ class DecisonTree(Model):
             else:
                 auc_var = roc_auc_score(self.y_test, self.y_score[:, 1])
 
-            print("AUC score:", auc_var)
-            print('Accuracy:', metrics.accuracy_score(self.y_test, y_pred))
+            self.print(f"AUC score: {auc_var}")
+            self.print(f'Accuracy: {metrics.accuracy_score(self.y_test, y_pred)}')
 
         # Evaluate the accuracy of the model
-        print('Depth of the tree:', depth)
+        self.print(f'Depth of the tree:{depth}')
 
         if self.regression:
-            print("unable to save tree for regression")
+            self.print("unable to save tree for regression")
         else:
             self.saveTreeClassifcationToFile(
                 self.clf, fileMod, classnames=self.y_train.unique())
+
 
     def getMeanAuc(self):
         # I hate i had to do this myself, but the roc_auc_score() cant handle having a varialbe test set for diffrent clasees
