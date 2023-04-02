@@ -21,66 +21,73 @@ import time
 
 N_SAMPLES = 10000
 SCALE = 0.05
-logging.basicConfig(filename=f'output-{time.time()}.log', level=logging.INFO,
+logging.basicConfig(filename=f'output-{time.time()}.log', level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
-radii = [1.1,1.2,1.3]
+radii = [1.1, 1.2, 1.3]
 
 datasets = [
-    {
-        "name":"iris",
-        "model": RF_Classifier,
-        "modelType":"RF",
-        "continous_features": ['sepal_length', 'sepal_width', 'petal_length', 'petal_width'],
-        "category_features":[],
-        "regression":False,
-        "classname": "class",
-    },
-    {
-        "name":"dry-bean",
-        "model": RF_Classifier,
-        "modelType":"RF",
-        "continous_features": ['Area', 'Perimeter', 'MajorAxisLength', 'MinorAxisLength', 'AspectRation', 'Eccentricity', 'ConvexArea', 'EquivDiameter', 'Extent', 'Solidity', 'roundness', 'Compactness', 'ShapeFactor1', 'ShapeFactor2', 'ShapeFactor3', 'ShapeFactor4'],
-        "category_features": [],
-        "regression": False,
-        "classname": "class",
-    },
-    {
-        "name":"adult",
-        "model": RF_Classifier,
-        "modelType":"RF",
-        "continous_features": ['age', 'fnlwgt', 'capital-gain', 'capital-loss', 'hours-per-week', 'education-num'],
-        "category_features": ['workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race', 'sex', 'native-country'],
-        "regression": False,
-        "classname": "class",
-    },
-    {
-        "name":"bike-sharing-hourly",
-        "model": RF_Regressor,
-        "modelType":"RF",
-        "continous_features": ['dteday', 'holiday', 'weekday', 'workingday', 'season', 'yr', 'mnth', 'hr', 'temp', 'atemp', 'hum', 'windspeed'],
-        "category_features": ['weathersit'],
-        "regression": True,
-        "classname":"cnt",
-    },
-    {
-        "name":"wine-quality",
-        "model": RF_Regressor,
-        "modelType":"RF",
-        "continous_features": ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", "is_red", "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol"],
-        "category_features": [],
-        "regression": True,
-        "classname": "quality",
-    },
-    {
-        "name": "iris",
-        "model": NN_Classifier,
-        "modelType":"nn",
-        "continous_features": ['sepal_length', 'sepal_width', 'petal_length', 'petal_width'],
-        "category_features":[],
-        "regression":False,
-        "classname": "class",
-    },
+    # {
+    #     "name":"iris",
+    #     "model": RF_Classifier,
+    #     "modelType":"RF",
+    #     "continous_features": ['sepal_length', 'sepal_width', 'petal_length', 'petal_width'],
+    #     "category_features":[],
+    #     "regression":False,
+        # "classname": "class",
+        # "exampleIndex":99
+    # },
+    # {
+    #     "name":"dry-bean",
+    #     "model": RF_Classifier,
+    #     "modelType":"RF",
+    #     "continous_features": ['Area', 'Perimeter', 'MajorAxisLength', 'MinorAxisLength', 'AspectRation', 'Eccentricity', 'ConvexArea', 'EquivDiameter', 'Extent', 'Solidity', 'roundness', 'Compactness', 'ShapeFactor1', 'ShapeFactor2', 'ShapeFactor3', 'ShapeFactor4'],
+    #     "category_features": [],
+    #     "regression": False,
+    #     "classname": "class",
+    #     "exampleIndex":5000
+    # },
+    # {
+    #     "name":"adult",
+    #     "model": RF_Classifier,
+    #     "modelType":"RF",
+    #     "continous_features": ['age', 'fnlwgt', 'capital-gain', 'capital-loss', 'hours-per-week', 'education-num'],
+    #     "category_features": ['workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race', 'sex', 'native-country'],
+    #     "regression": False,
+    #     "classname": "class",
+    #     "exampleIndex":99
+    # },
+    # {
+    #     "name":"bike-sharing-hourly",
+    #     "model": RF_Regressor,
+    #     "modelType":"RF",
+    #     "continous_features": ['dteday', 'holiday', 'weekday', 'workingday', 'season', 'yr', 'mnth', 'hr', 'temp', 'atemp', 'hum', 'windspeed'],
+    #     "category_features": ['weathersit'],
+    #     "regression": True,
+    #     "classname":"cnt",
+    #     "exampleIndex":99
+
+    # },
+    # {
+    #     "name":"wine-quality",
+    #     "model": RF_Regressor,
+    #     "modelType":"RF",
+    #     "continous_features": ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", "is_red", "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol"],
+    #     "category_features": [],
+    #     "regression": True,
+    #     "classname": "quality",
+    #     "exampleIndex":99
+    # },
+    # {
+    #     "name": "iris",
+    #     "model": NN_Classifier,
+    #     "modelType":"nn",
+    #     "continous_features": ['sepal_length', 'sepal_width', 'petal_length', 'petal_width'],
+    #     "category_features":[],
+    #     "regression":False,
+    #     "classname": "class",
+    #     "exampleIndex":7000
+    # },
     {
         "name": "dry-bean",
         "model": NN_Classifier,
@@ -89,6 +96,7 @@ datasets = [
         "category_features": [],
         "regression": False,
         "classname": "class",
+        "exampleIndex":9999
     },
     {
         "name": "adult",
@@ -98,6 +106,7 @@ datasets = [
         "category_features": ['workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race', 'sex', 'native-country'],
         "regression": False,
         "classname": "class",
+        "exampleIndex":99
     },
     {
         "name": "bike-sharing-hourly",
@@ -107,6 +116,8 @@ datasets = [
         "category_features": ['weathersit'],
         "regression": True,
         "classname":"cnt",
+        "exampleIndex":99
+
     },
     {
         "name": "wine-quality",
@@ -116,6 +127,8 @@ datasets = [
         "category_features": [],
         "regression": True,
         "classname": "quality",
+        "exampleIndex":99
+
     },
 ]
 
@@ -143,7 +156,7 @@ for dataset in datasets:
         start_time = time.time()
 
         model_data = model.getLocalisedData(
-            99, n_samples=N_SAMPLES, radius=radius, globalSample=50000)
+            dataset['exampleIndex'], n_samples=N_SAMPLES, radius=radius, globalSample=50000)
 
         logging.info(f"local model classes: {model_data[model.classname].unique()} ")
 
