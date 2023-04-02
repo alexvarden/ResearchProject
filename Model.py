@@ -27,7 +27,6 @@ class Model:
                  ):
        
         self.logger = None
-
         self.regression = False
         self.continous_features = continous_features
         self.categorical_features = categorical_features
@@ -93,24 +92,52 @@ class Model:
         relative_radius = self.getDistanceToNearestOpposite(
             samples, example
         )
-        print(radius * relative_radius)
+        # print(radius * relative_radius)
         local = self.getNearestNeighbour(
             samples, example, radius=radius * relative_radius)
-        print(f"lenght : {len(local)}")
+        # print(f"lenght : {len(local)}")
+        
+        if (len(local) == 1):
+            print("not enough divesity trying again")
+            return self.getLocalisedData( index, n_samples, radius, globalSample)
+                
         if (len(local) == 0):
             raise Exception(
                 'could not find any nearest neighbors, make radius bigger')
 
         local = self.getRandomSamples(local, n_samples)
-        print(local)
+        # print(local)
         local[self.classname] = self.clf.predict(local)
         return local
 
     def getGlobalRandomSample(self,  n_samples=1 ):
         data = self.getRandomSamples(self.X, n_samples=n_samples)
         data[self.classname] = self.clf.predict(data)
-
         return data
+    
+    def getGlobalStatisfeidSample(self,  n_samples=1):
+        data = self.getRandomSamples(self.X, n_samples=n_samples*1000)
+        data[self.classname] = self.clf.predict(data)
+        return data.groupby(self.classname, group_keys=False).apply(
+            lambda x: x.sample(frac=0.001))
+
+    def getBalancedSample(self,  n_samples=1):
+        samplesPerClass = n_samples / len(self.y.unique())
+        data = self.getRandomSamples(self.X, n_samples=n_samples)
+        data[self.classname] = self.clf.predict(data)
+
+        while True:
+            newsamples = self.getRandomSamples(self.X, n_samples=n_samples*1000)
+            newsamples[self.classname] = self.clf.predict(newsamples)
+            data = pd.concat([data,newsamples])
+            print(data[self.classname].value_counts())
+
+            if(all(count >
+                samplesPerClass for count in data[self.classname].value_counts())):
+                break
+
+        return data.groupby(self.classname, group_keys=False).apply(
+            lambda x: x.sample(n=math.ceil(samplesPerClass)))
 
     def getRandomSamples(self, data, n_samples=1):
         # Generate a new DataFrame with random values for numerical columns
@@ -175,7 +202,6 @@ class Model:
             counterExamples = counterExamples[counterExamples[self.classname] != class_]
             counterExamples = counterExamples.drop([self.classname], axis=1)
                    
-
         transformations = self.getTransformer()
         transformations.fit_transform(self.X)
 
@@ -196,14 +222,11 @@ class Model:
         if (self.logger):
             self.logger.info(out)
 
-
-
     def findQuantile(self, data, number):
         for key, value in data.items():
             if number >= value[0] and number <= value[1]:
                 return key
         return None
-        
 
     def find_range_index(self,data, numbers):
         result = []
@@ -235,9 +258,6 @@ class Model:
             quantile_ranges[label] = [lower_bound, upper_bound]
 
         return quantile_ranges
-
-
-
 
     def hamming_distance(self,x, y):
         return np.sum(x != y)

@@ -158,9 +158,6 @@ class CountefactualSurrogateModel:
                 print(f" {classes[classCode]} => {classes[desiredClass]}({percentage_to_sample})")
                 
 
-
-
-
                 sample = query_instances.drop([self.className], axis=1).sample(
                     frac=percentage_to_sample, random_state=1)
 
@@ -209,8 +206,8 @@ class CountefactualSurrogateModel:
                 total_CFs=self.n_samples,
                 desired_range=classes[desiredClass],
                 proximity_weight=1,
-                sparsity_weight=0.1,
-                diversity_weight=0.1,
+                sparsity_weight=0.5,
+                diversity_weight=0.5,
                 categorical_penalty=0,
             )
         else:
@@ -219,8 +216,8 @@ class CountefactualSurrogateModel:
                 total_CFs=self.n_samples,
                 desired_class=int(desiredClass),
                 proximity_weight=1,
-                sparsity_weight=0.1,
-                diversity_weight=0.1,
+                sparsity_weight=0.5,
+                diversity_weight=0.5,
                 categorical_penalty=0,
             )
 
